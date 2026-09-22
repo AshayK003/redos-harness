@@ -35,6 +35,9 @@ ENV/
 *.swo
 *~
 
+# Test caches
+.pytest_cache/
+
 # Project specific
 data/*.csv
 data/*.json

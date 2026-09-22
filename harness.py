@@ -16,6 +16,8 @@ TIMEOUT_S = 15
 
 def time_once(pattern, method, text):
     """Single timing in this process. Returns seconds."""
+    if isinstance(text, bytes) and isinstance(pattern, str):
+        pattern = pattern.encode()
     rx = re.compile(pattern)
     t0 = time.perf_counter()
     try:
@@ -56,6 +58,12 @@ def classify(times):
     counts as exponential: a real attacker only needs the small input."""
     if any(t is None for t in times[1:]):
         return "exponential (timeout)"
+    vals = [t for t in times if t is not None]
+    if vals and max(vals) < 0.001:
+        # Below timer-resolution floor: sub-ms ceilings read as linear.
+        # A curve that matters exceeds 1ms within a 16x size sweep;
+        # re-measure bigger if contested.
+        return "linear"
     pairs = [(a, b) for a, b in zip(times, times[1:]) if a and a > 0 and b is not None]
     if not pairs:
         return "unknown"
@@ -72,6 +80,10 @@ def benign_check(pattern, method, accepts, rejects):
 
     Returns (ok, detail-string). Semantics compared as match/no-match only.
     """
+    if isinstance(pattern, str) and any(isinstance(s, bytes) for s in accepts + rejects):
+        pattern = pattern.encode()
+        accepts = [s.encode() if isinstance(s, str) else s for s in accepts]
+        rejects = [s.encode() if isinstance(s, str) else s for s in rejects]
     rx = re.compile(pattern)
     fn = {"match": rx.match, "fullmatch": rx.fullmatch, "search": rx.search}[method]
     for s in accepts:
