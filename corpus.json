@@ -1,0 +1,78 @@
+{
+  "version": "v1",
+  "frozen": "2026-09-22",
+  "engine": "CPython 3.12.10 re",
+  "entries": [
+    {
+      "id": "black-tabs",
+      "cve": "CVE-2024-21503",
+      "pattern": "\\s*\\t+\\s*(\\S)",
+      "method": "match",
+      "pump": {"core": "\\t", "sizes": [2000, 5000], "observed": "TIMEOUT>=15s at both"},
+      "benign_accept": ["\\tx"],
+      "benign_reject": ["   "],
+      "advisory": "https://github.com/advisories/GHSA-fj7x-q9j7-g6q6",
+      "fix_commit": "https://github.com/psf/black/commit/f00093672628d212b8965a8993cee8bedf5fe9b8",
+      "upstream_fix_kind": "regex removed (lstrip logic)"
+    },
+    {
+      "id": "pydantic-email",
+      "cve": "CVE-2024-3772",
+      "pattern": "([\\w ]*?) *<(.*)> *",
+      "method": "fullmatch",
+      "pump": {"template": "' '*n + '<' + 'y'*n", "sizes_ms": {"3000": 92.1, "6000": 354.6, "12000": 1520.5}, "observed": "quadratic (~4x per doubling)"},
+      "note": "Snyk-published PoC '<'+' '*3000 measures 0.0ms on CPython 3.12 (does NOT reproduce); spaces-first pump above does. Advisory prose unverified; our pump is the verified one.",
+      "benign_accept": ["name <a@b.com>"],
+      "benign_reject": ["not-an-email"],
+      "advisory": "https://security.snyk.io/vuln/SNYK-PYTHON-PYDANTIC-5907722",
+      "fix_commit": "https://github.com/pydantic/pydantic/commit/59d8f38fd6220e3917c53785dbc70317d6f8e631",
+      "upstream_fix_kind": "length cap (2048), regex untouched"
+    },
+    {
+      "id": "sqlparse-string",
+      "cve": "CVE-2023-30608",
+      "pattern": "'(''|\\\\\\\\|\\\\'|[^'])*'",
+      "method": "match",
+      "pump": {"template": "\"'\" + '\\\\'*n (unterminated)", "sizes": [60, 120], "observed": "TIMEOUT>=15s at both"},
+      "benign_accept": ["'hello'"],
+      "benign_reject": ["hello"],
+      "advisory": "https://security.snyk.io/vuln/SNYK-PYTHON-SQLPARSE-5426157",
+      "fix_commit": "https://github.com/andialbrecht/sqlparse/commit/c457abd5f097dd13fb21543381e7cfafe7d31cfb",
+      "upstream_fix_kind": "regex repaired (dropped overlapping alternative)"
+    },
+    {
+      "id": "tornado-unquote",
+      "cve": "CVE-2024-52804",
+      "kind": "driver",
+      "pattern": "repeated .search() with \\\\ [0-3][0-7][0-7] and [\\\\]. in a while loop (quadratic usage, not a single evil pattern)",
+      "method": "function _unquote_old (verbatim pre-fix loop)",
+      "pump": {"template": "'a=\"b=' + '\\\\\\\\'*n + '\\\"'", "sizes_ms": {"20000": 5173.6}, "sizes_timeout": [100000], "observed": "quadratic; upstream reports >60s at n=100k pre-fix"},
+      "benign_accept": [["a=\"b=\\\"\"", "b=\""]],
+      "advisory": "https://security.snyk.io/vuln/SNYK-PYTHON-TORNADO-8400708",
+      "fix_commit": "https://github.com/tornadoweb/tornado/commit/d5ba4a1695fbf7c6a3e54313262639b198291533",
+      "upstream_fix_kind": "restructure (single .sub() pass)"
+    },
+    {
+      "id": "tarfile-pax",
+      "cve": "CVE-2024-6232",
+      "pattern": "(\\d+) ([^=]+)=",
+      "method": "match-scan",
+      "pump": {"core": "b'9'", "sizes_ms": {"2000": 25.9, "8000": 500.6}, "observed": "~19x per 4x length, quadratic"},
+      "benign_accept": ["13 foo="],
+      "advisory": "https://github.com/python/cpython/issues/121285",
+      "fix_commit": "https://github.com/python/cpython/commit/34ddb64d088dd7ccc321f6103d23153256caa5d4",
+      "upstream_fix_kind": "regex removed (single-pass parser)"
+    },
+    {
+      "id": "tarfile-hdrcharset",
+      "cve": "CVE-2024-6232",
+      "pattern": "\\d+ hdrcharset=([^\\n]+)\\n",
+      "method": "search",
+      "pump": {"core": "b'1'", "sizes_ms": {"5000": 79.5, "20000": 1612.2}, "observed": "~20x per 4x length, quadratic"},
+      "benign_accept": ["12 hdrcharset=BINARY\\n"],
+      "advisory": "https://github.com/python/cpython/issues/121285",
+      "fix_commit": "https://github.com/python/cpython/commit/34ddb64d088dd7ccc321f6103d23153256caa5d4",
+      "upstream_fix_kind": "regex removed (single-pass parser)"
+    }
+  ]
+}
