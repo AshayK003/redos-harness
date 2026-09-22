@@ -2,6 +2,9 @@
 
 **Author:** [Ashay Kushwaha](https://github.com/AshayK003) ([CypherLabs](https://github.com/AshayK003))
 **Report:** [internals/report.pdf](internals/report.pdf)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)] [![Report](https://img.shields.io/badge/report-PDF-red.svg)](internals/report.pdf)
+
+**Keywords:** ReDoS, regular expressions, Python security, vulnerability detection, catastrophic backtracking, atomic groups
 
 > **Status: measured on CPython 3.12.10 (Windows), `python report.py`
 > regenerates every number.** Article follows numbers, never precedes them.
