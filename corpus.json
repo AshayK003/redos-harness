@@ -34,8 +34,8 @@
       "pattern": "'(''|\\\\\\\\|\\\\'|[^'])*'",
       "method": "match",
       "pump": {"template": "\"'\" + '\\\\'*n (unterminated)", "sizes": [60, 120], "observed": "TIMEOUT>=15s at both"},
-      "benign_accept": ["'hello'"],
-      "benign_reject": ["hello"],
+      "benign_accept": ["'hello'", "'it''s'", "'\\\\'", "'\\''"],
+      "benign_reject": ["hello", "'unterminated"],
       "advisory": "https://security.snyk.io/vuln/SNYK-PYTHON-SQLPARSE-5426157",
       "fix_commit": "https://github.com/andialbrecht/sqlparse/commit/c457abd5f097dd13fb21543381e7cfafe7d31cfb",
       "upstream_fix_kind": "regex repaired (dropped overlapping alternative)"

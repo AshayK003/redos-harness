@@ -10,7 +10,7 @@ import time
 
 sys.path.insert(0, ".")
 
-from harness import benign_check, classify, measure  # noqa: E402
+from harness import benign_check, classify, fit_slope, measure  # noqa: E402
 from rewriter import rewrite_candidates  # noqa: E402
 
 TIMEOUT_S = 15
@@ -56,19 +56,19 @@ def pumps(entry):
     eid = entry["id"]
     if eid == "black-tabs":
         ns = [250, 500, 1000, 2000, 4000]
-        return "match", ["\t" * n for n in ns], ["\tx"], ["   "]
+        return "match", ["\t" * n for n in ns], ["\tx"], ["   "], ns
     if eid == "pydantic-email":
         ns = [1500, 3000, 6000, 12000, 24000]
-        return "fullmatch", [" " * n + "<" + "y" * n for n in ns], ["name <a@b.com>"], ["not-an-email"]
+        return "fullmatch", [" " * n + "<" + "y" * n for n in ns], ["name <a@b.com>"], ["not-an-email"], ns
     if eid == "sqlparse-string":
         ns = [15, 30, 60, 120, 240]
-        return "match", ["'" + "\\" * n for n in ns], ["'hello'"], ["hello"]
+        return "match", ["'" + "\\" * n for n in ns], ["'hello'", "'it''s'", "'\\\\'", "'\\''"], ["hello", "'unterminated"], ns
     if eid == "tarfile-pax":
         ns = [1000, 2000, 4000, 8000, 16000]
-        return "match", [b"9" * n for n in ns], [b"13 foo="], [b"   "]
+        return "match", [b"9" * n for n in ns], [b"13 foo="], [b"   "], ns
     if eid == "tarfile-hdrcharset":
         ns = [2500, 5000, 10000, 20000, 40000]
-        return "search", [b"1" * n for n in ns], [b"12 hdrcharset=BINARY\n"], [b"no digits here!"]
+        return "search", [b"1" * n for n in ns], [b"12 hdrcharset=BINARY\n"], [b"no digits here!"], ns
     raise ValueError(eid)
 
 
@@ -96,13 +96,15 @@ def main():
                     except mp.TimeoutError:
                         out += [None] * (len(texts) - len(out))
                         break
-            print(f"{eid:<20} {classify(out):<12} {'(driver: restructure, no pattern rule)':<38} {'-':<12} measured; fix=upstream sub-pass")
-            print(f"  times: {fmt(out)}")
+            dslope = fit_slope(out, ns)
+            print(f"{eid:<20} {classify(out, ns):<12} {'(driver: restructure, no pattern rule)':<38} {'-':<12} measured; fix=upstream sub-pass")
+            print(f"  times: {fmt(out)} slope={dslope:.2f}" if dslope is not None else f"  times: {fmt(out)}")
             continue
-        method, texts, accepts, rejects = pumps(entry)
+        method, texts, accepts, rejects, ns = pumps(entry)
         pat = entry["pattern"]  # JSON escaping already yields the exact source pattern
         before = measure(pat, method, texts)
-        bclass = classify(before)
+        bclass = classify(before, ns)
+        bslope = fit_slope(before, ns)
         ok, _ = benign_check(pat, method, accepts, rejects)
         verdict, after, cand_shown = "UNFIXED", None, "-"
         if bclass == "linear":
@@ -112,11 +114,12 @@ def main():
             if not cok:
                 continue
             at = measure(cand, method, texts)
-            if classify(at) == "linear":
+            if classify(at, ns) == "linear":
                 verdict, after, cand_shown = "FIXED", at, cand
                 break
-        print(f"{eid:<20} {bclass:<12} {cand_shown:<38} {(classify(after) if after else '-').center(12)} {verdict}{' (benign base broken!)' if not ok else ''}")
-        print(f"  times: {fmt(before)}")
+        print(f"{eid:<20} {bclass:<12} {cand_shown:<38} {(classify(after, ns) if after else '-').center(12)} {verdict}{' (benign base broken!)' if not ok else ''}")
+        slope_txt = f" slope={bslope:.2f}" if bslope is not None else ""
+        print(f"  times: {fmt(before)}{slope_txt}")
         if after:
             print(f"  fixed: {fmt(after)}")
 

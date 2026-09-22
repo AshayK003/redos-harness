@@ -6,6 +6,7 @@ swallowed. Timing runs in worker *processes* (threads can't be killed
 under the GIL when `re` backtracks catastrophically).
 """
 
+import math
 import multiprocessing as mp
 import re
 import statistics
@@ -53,9 +54,22 @@ def measure(pattern, method, texts, timeout=TIMEOUT_S):
     return out
 
 
-def classify(times):
-    """Growth class from per-doubling times. Timeout past the first length
-    counts as exponential: a real attacker only needs the small input."""
+def fit_slope(times, sizes=None):
+    """Log-log slope of time vs size (fitted exponent): ~1 linear, ~2
+    quadratic, >>2 exponential. None if unfittable. Sizes default to a
+    doubling series (the harness pump convention)."""
+    if sizes is None:
+        sizes = [2 ** i for i in range(len(times))]
+    pts = [(math.log(n), math.log(t)) for n, t in zip(sizes, times) if t and t > 0]
+    if len(pts) < 3:
+        return None
+    slope, _intercept = statistics.linear_regression([p[0] for p in pts], [p[1] for p in pts])
+    return slope
+
+
+def classify(times, sizes=None):
+    """Growth class from a size sweep. Timeout past the first length counts
+    as exponential: a real attacker only needs the small input."""
     if any(t is None for t in times[1:]):
         return "exponential (timeout)"
     vals = [t for t in times if t is not None]
@@ -64,13 +78,12 @@ def classify(times):
         # A curve that matters exceeds 1ms within a 16x size sweep;
         # re-measure bigger if contested.
         return "linear"
-    pairs = [(a, b) for a, b in zip(times, times[1:]) if a and a > 0 and b is not None]
-    if not pairs:
+    slope = fit_slope(times, sizes)
+    if slope is None:
         return "unknown"
-    median_ratio = statistics.median(b / a for a, b in pairs)
-    if median_ratio >= 6:
+    if slope >= 2.5:
         return "exponential"
-    if median_ratio >= 2.7:
+    if slope >= 1.6:
         return "polynomial"
     return "linear"
 
