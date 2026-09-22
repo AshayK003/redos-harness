@@ -5,10 +5,12 @@ Every number regenerable; timeouts are table entries, not errors.
 """
 
 import json
+import os
 import sys
 import time
 
-sys.path.insert(0, ".")
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 
 from harness import benign_check, classify, fit_slope, measure  # noqa: E402
 from rewriter import rewrite_candidates  # noqa: E402
@@ -77,7 +79,7 @@ def fmt(times):
 
 
 def main():
-    corpus = json.load(open("corpus.json"))["entries"]
+    corpus = json.load(open(os.path.join(HERE, "corpus.json")))["entries"]
     print(f"{'entry':<20} {'before':<12} {'candidate':<38} {'after':<12} verdict")
     print("-" * 110)
     for entry in corpus:
